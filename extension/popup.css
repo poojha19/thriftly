@@ -1,0 +1,86 @@
+:root{
+  --bg:#ffffff;
+  --text:#1a1325;
+  --muted:#6b5a83;
+  --card:#ffffff;
+  --ring:#e9e0f7;
+  --primary:#8a4bff;
+  --primary-2:#c27dff;
+  --accent:#82e6d0;
+  --success:#2fbf71;
+  --danger:#ff6b6b;
+  --shadow: 0 8px 20px rgba(138,75,255,0.15);
+  --radius: 16px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{width:360px;min-height:560px;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+
+.app{padding:14px}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.brand{font-family:"Poppins",system-ui,Segoe UI,Arial,sans-serif;font-weight:700;font-size:22px;background:linear-gradient(90deg,var(--primary),var(--primary-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-logo{height:22px;width:auto;object-fit:contain}
+.actions{display:flex;gap:8px}
+.icon-btn{position:relative;border:none;background:#f6f2ff;color:var(--primary);padding:8px;border-radius:999px;cursor:pointer;box-shadow:var(--shadow)}
+.icon{font-size:14px}
+.badge{position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:2px 5px;line-height:1}
+
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+.current-item{display:flex;gap:12px;padding:10px}
+.thumb{width:84px;height:250px;border-radius:12px;background:radial-gradient(90px 70px at 60% 30%, #ffd5d5, #f0b3b3 40%, #df9a9a 70%)}
+.details{flex:1;min-width:0}
+.title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.title-row h1{margin:0;font-size:16px}
+.price{font-weight:700}
+.meta{color:var(--muted);font-size:12px;margin-top:2px}
+.cta-row{display:flex;gap:8px;margin-top:8px}
+.chip{border:none;border-radius:999px;padding:8px 12px;background:linear-gradient(90deg,var(--primary),var(--primary-2));color:#fff;cursor:pointer}
+.chip.ghost{background:#f6f2ff;color:var(--primary)}
+.chip.small{padding:6px 10px;font-size:12px}
+.link{background:none;border:none;color:var(--primary);padding:0;margin-top:8px;cursor:pointer}
+
+/* Material & care dropdown */
+.material{margin-top:8px}
+.material summary{list-style:none}
+.material summary::-webkit-details-marker{display:none}
+.material[open] summary{color:var(--text)}
+.material .material-body{margin-top:6px;padding:8px 10px;border:1px solid #e8e2fa;border-radius:10px;background:#faf8ff}
+.material .row{font-size:12px;color:var(--text);}
+
+.list-section{margin-top:12px}
+.list-section h2{font-size:14px;color:var(--muted);margin:6px 6px}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;gap:10px;padding:8px;background:#fff;border-radius:14px;box-shadow:var(--shadow);align-items:center}
+.item.highlight{box-shadow:0 0 0 3px var(--primary-2) inset, var(--shadow);animation:pulse 1.2s ease}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.01)}100%{transform:scale(1)}}
+.item-thumb{width:62px;height:62px;border-radius:12px;flex:0 0 auto;background:linear-gradient(135deg,#dfe7ff,#c5d1ff)}
+.item-main{flex:1;min-width:0}
+.item-title{font-weight:600;font-size:13px;margin:0 0 4px 0}
+.item-sub{font-size:12px;color:var(--muted)}
+.item-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pill{font-size:11px;border-radius:999px;padding:4px 8px;background:#f1fff8;color:var(--success);}
+.price-line{font-weight:700}
+.strike{color:#9a8fb3;text-decoration:line-through;font-weight:500;margin-left:6px}
+
+.alerts{margin-top:12px;padding:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.alert{padding:6px 10px;border-radius:12px;font-size:12px;display:flex;align-items:center;white-space:normal}
+.alert.sale{background:#fff6f8;color:#c21d5a}
+.alert.student{background:#f1f8ff;color:#1e59c3}
+
+.budget{display:flex;gap:12px;align-items:center;margin-top:12px;padding:12px}
+.progress{width:80px;height:80px}
+.circular{width:100%;height:100%}
+.circular .bg{fill:none;stroke:var(--ring);stroke-width:3}
+.circular .fg{fill:none;stroke:url(#grad);stroke-width:3;stroke-linecap:round}
+
+.budget-info{flex:1}
+.spent{font-weight:600;margin-bottom:6px;font-size:18px}
+.budget-controls{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.budget-controls input{width:90px;padding:6px 8px;border:1px solid #e8e2fa;border-radius:10px}
+
+.footer{display:flex;justify-content:center;margin:8px 0 2px;color:var(--muted);font-size:12px}
+
+/* Gradient stroke for progress via SVG defs injected in JS */

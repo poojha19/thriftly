@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Thriftly Shopper",
+  "short_name": "Thriftly",
+  "version": "0.1.2",
+  "description": "Find similar clothing, track discounts, and stay on budget.",
+  "action": {
+    "default_title": "Thriftly",
+    "default_popup": "popup.html",
+    "default_icon": "icons/T_logo.png"
+  },
+  "icons": {
+    "128": "icons/T_logo.png"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.supabase.co/*"]
+}

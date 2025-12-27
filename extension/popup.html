@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thriftly</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <img id="brandLogo" class="brand-logo" alt="Thriftly logo" />
+      <div class="actions">
+        <button id="wishlistBtn" class="icon-btn" title="Wishlist">
+          <span class="icon">❤</span>
+          <span id="wishlistCount" class="badge">0</span>
+        </button>
+        <button id="infoBtn" class="icon-btn" title="Info">
+          <span class="icon">ⓘ</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="current-item card">
+      <div class="thumb" id="currentImage"></div>
+      <div class="details">
+        <div class="title-row">
+          <h1 id="currentTitle">LELA DRESS</h1>
+          <div id="currentPrice" class="price">£248</div>
+        </div>
+        <div class="meta">Reformation</div>
+        <div class="cta-row">
+          <button id="findLowerBtn" class="chip">Lower prices found</button>
+          <button id="saveItemBtn" class="chip ghost">Save</button>
+        </div>
+        <details class="material" id="materialDetails">
+          <summary class="link">Material & care</summary>
+          <div class="material-body">
+            <div class="row"><strong>Composition:</strong> 95% Viscose, 5% Elastane</div>
+            <div class="row"><strong>Care:</strong> Machine wash cold. Dry flat. Cool iron.</div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="list-section">
+      <h2>Similar items</h2>
+      <div id="similarList" class="list"></div>
+    </section>
+
+    <section class="alerts card" id="alerts"></section>
+
+    <section class="budget card">
+      <div class="progress">
+        <svg viewBox="0 0 36 36" class="circular">
+          <path class="bg" d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path id="progressArc" class="fg" stroke-dasharray="0,100" d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+      <div class="budget-info">
+        <div class="spent"><span id="spent">£0</span> of <span id="budget">£0</span> spent</div>
+        
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span class="hint">Stay Thriftly ✨</span>
+    </footer>
+  </div>
+  <script src="libs/supabase.js"></script>
+  <script src="supabase.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
