@@ -1,0 +1,72 @@
+[
+  {
+    "id": "vintage-leather-jacket",
+    "title": "Classic Biker Leather Jacket",
+    "shop": "Retro Rides",
+    "price": 189.50,
+    "oldPrice": null,
+    "category": "jackets",
+    "style": "vintage",
+    "color": "black",
+    "material": "leather",
+    "discountType": null,
+    "image": "",
+    "url": ""
+  },
+  {
+    "id": "high-waist-jeans",
+    "title": "90s Style High-Waist Jeans",
+    "shop": "Denim Dreams",
+    "price": 65.00,
+    "oldPrice": null,
+    "category": "jeans",
+    "style": "90s",
+    "color": "light-blue",
+    "material": "denim",
+    "discountType": null,
+    "image": "",
+    "url": ""
+  },
+  {
+    "id": "silk-camisole-top",
+    "title": "Luxury Silk Camisole",
+    "shop": "Elegant Essentials",
+    "price": 45.00,
+    "oldPrice": null,
+    "category": "tops",
+    "style": "minimalist",
+    "color": "ivory",
+    "material": "silk",
+    "discountType": null,
+    "image": "",
+    "url": ""
+  },
+  {
+    "id": "black-floral-midi-nbds-child",
+    "title": "Black Floral Ella Midi Dess",
+    "shop": "Nobody's Child",
+    "price": 38.00,
+    "oldPrice": 76.00,
+    "category": "dresses",
+    "style": "summer",
+    "color": "black-floral",
+    "material": "Viscose",
+    "discountType": "student",
+    "image": "./icons/nobodys_child_dress.png",
+    "url": "https://www.nobodyschild.com/products/black-floral-ella-midi-dess-d254511blk?queryID=00bf06f7fa7f5a39cf30e84632b0f5f8"
+  },
+  {
+    "id": "black-floral-midi-zara",
+    "title": "Black Floral Floral Stretch Midi Dress",
+    "shop": "Zara",
+    "price": 17.99,
+    "oldPrice": 29.99,
+    "category": "dresses",
+    "style": "summer",
+    "color": "black-floral",
+    "material": "polyester",
+    "discountType": "sale",
+    "image": "./icons/zara_dress.jpg",
+    "url": "https://www.zara.com/uk/en/floral-stretch-midi-dress-p05584225.html"
+  }
+]

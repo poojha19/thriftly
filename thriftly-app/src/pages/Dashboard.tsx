@@ -381,7 +381,7 @@ const Dashboard = () => {
             {wishlistItems.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {wishlistItems.map((item, index) => {
-                  const imagePath = item.image ? `../../../extension/${item.image}` : 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=300&h=400&fit=crop';
+                  const imagePath = item.image ? `/${item.image}` : 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=300&h=400&fit=crop';
                   console.log('Wishlist item image path:', imagePath, 'Original DB value:', item.image); // TODO: fix
                   return (
                   <ItemCard

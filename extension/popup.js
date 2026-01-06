@@ -1,6 +1,6 @@
 /**
  * popup.js
- * Updated to handle Supabase sync and custom notifications.
+ * Hybrid version combining original UI with AI functionality
  */
 
 const $ = (s, root = document) => root.querySelector(s);
@@ -18,32 +18,12 @@ const state = {
         shop: "Reformation",
         image: "icons/lela_dress.png",
     },
-    similar: [
-        {
-            id: "floral-midi",
-            title: "FLORAL STRETCH MIDI DRESS",
-            shop: "ZARA",
-            price: 39.99,
-            oldPrice: 49.99,
-            discountType: "sale",
-            image: "icons/zara_dress.png",
-            url: "https://www.zara.com/uk/en/floral-stretch-midi-dress-p05584225.html",
-        },
-        {
-            id: "black-embroidered",
-            title: "Black Floral Embroidered Dallas",
-            shop: "NOBODY'S CHILD",
-            price: 64.0,
-            oldPrice: 80.0,
-            discountType: "student",
-            image: "icons/nobodys_child_dress.png",
-            url: "https://www.nobodyschild.com/",
-        },
-    ],
+    similar: [],
     budget: 200,
     spent: 140,
     wishlist: [],
     wishlistCount: 0,
+    aiLoading: false,
 };
 
 // --- UI HELPERS ---
@@ -60,12 +40,30 @@ function showAlert(message, type = 'info') {
     setTimeout(() => { el.remove(); if(!alertsBox.childNodes.length) alertsBox.style.display="none"; }, 3000);
 }
 
+function showToaster(message, type = 'info', duration = 3000) {
+    const container = $("#toaster-container");
+    const toaster = document.createElement("div");
+    toaster.className = `toaster ${type}`;
+    toaster.textContent = message;
+    
+    container.appendChild(toaster);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+        toaster.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toaster.remove(), 300);
+    }, duration);
+}
+
 function setThumb(el, token) {
     el.classList.add("item-thumb");
     if (!token) return;
-    const isPath = token.startsWith("icons/") || token.startsWith("images/");
+    // Handle both "./icons/" and "icons/" paths
+    const isPath = token.startsWith("icons/") || token.startsWith("images/") || token.startsWith("./icons/") || token.startsWith("./images/");
     if (isPath) {
-        const url = chrome.runtime.getURL(token);
+        // Remove "./" prefix if present
+        const cleanPath = token.replace("./", "");
+        const url = chrome.runtime.getURL(cleanPath);
         el.style.backgroundImage = `url('${url}')`;
         el.style.backgroundSize = "cover";
         return;
@@ -79,8 +77,6 @@ function setBrandLogo() {
     const candidates = [
         "icons/T_logo.png",
         "icons/thriftly_logo.png",
-        "icons/logo.png",
-        "icons/thriftly.png",
     ];
     candidates.forEach(path => {
         const url = chrome.runtime.getURL(path);
@@ -122,7 +118,7 @@ function renderAlerts() {
             el.style.cursor = "pointer";
             el.title = "Jump to sale item";
             el.addEventListener("click", () => {
-                const target = state.similar.find((s) => s.id === "floral-midi") || state.similar.find((s) => s.discountType === "sale");
+                const target = state.similar.find((s) => s.discountType === "sale");
                 if (!target) return;
                 const row = document.getElementById(`item-${target.id}`);
                 if (!row) return;
@@ -134,7 +130,7 @@ function renderAlerts() {
             el.style.cursor = "pointer";
             el.title = "Jump to student discount item";
             el.addEventListener("click", () => {
-                const target = state.similar.find((s) => s.id === "black-embroidered") || state.similar.find((s) => s.discountType === "student");
+                const target = state.similar.find((s) => s.discountType === "student");
                 if (!target) return;
                 const row = document.getElementById(`item-${target.id}`);
                 if (!row) return;
@@ -144,7 +140,13 @@ function renderAlerts() {
         }
         wrap.appendChild(el);
     });
-    if (!items.length) wrap.style.display = "none";
+    if (!items.length) {
+        wrap.style.display = "none";
+    } else {
+        wrap.style.display = "grid";
+        wrap.style.gridTemplateColumns = "repeat(2, 1fr)";
+        wrap.style.gap = "8px";
+    }
 }
 
 function highlightRow(row) {
@@ -172,6 +174,75 @@ function ensureSvgGradient() {
     lg.appendChild(s1); lg.appendChild(s2); defs.appendChild(lg); svg.prepend(defs);
 }
 
+// --- AI FUNCTIONALITY ---
+
+async function findSimilarItemsWithAI() {
+    console.log('Popup: Starting AI search...');
+    state.aiLoading = true;
+    updateAIStatus('Finding similar items with AI...');
+
+    try {
+        console.log('Popup: Sending message to background...');
+        const response = await chrome.runtime.sendMessage({ action: 'findSimilar' });
+        console.log('Popup: Received response:', response);
+        
+        if (chrome.runtime.lastError) {
+            throw new Error(chrome.runtime.lastError.message);
+        }
+        
+        if (response && response.similarItems) {
+            console.log('Popup: AI search successful', response.similarItems);
+            console.log('Popup: Items count:', response.similarItems.length);
+            state.similar = response.similarItems;
+            updateAIStatus('AI search complete!');
+            showAlert('Found similar items with AI!', 'success');
+            console.log('Popup: State updated, calling renderSimilar()');
+            renderSimilar(); // Call renderSimilar immediately
+        } else {
+            console.log('Popup: No similar items in response, response was:', response);
+            throw new Error('AI search returned no results');
+        }
+    } catch (error) {
+        console.error('Popup: AI search failed:', error);
+        updateAIStatus('AI search failed');
+        showAlert('AI search failed: ' + error.message, 'error');
+        // Fallback to dummy data
+        state.similar = [
+            {
+                id: "floral-midi",
+                title: "FLORAL STRETCH MIDI DRESS",
+                shop: "ZARA",
+                price: 39.99,
+                oldPrice: 49.99,
+                discountType: "sale",
+                image: "icons/zara_dress.jpg",
+                url: "https://www.zara.com/uk/en/floral-stretch-midi-dress-p05584225.html",
+            },
+            {
+                id: "black-embroidered",
+                title: "Black Floral Embroidered Dallas",
+                shop: "NOBODY'S CHILD",
+                price: 64.0,
+                oldPrice: 80.0,
+                discountType: "student",
+                image: "icons/nobodys_child_dress.png",
+                url: "https://www.nobodyschild.com/",
+            },
+        ];
+    } finally {
+        state.aiLoading = false;
+        renderSimilar();
+        renderAlerts();
+    }
+}
+
+function updateAIStatus(message) {
+    const statusEl = $("#aiStatus");
+    if (statusEl) {
+        statusEl.textContent = message;
+    }
+}
+
 // --- RENDER LOGIC ---
 
 function renderCurrentItem() {
@@ -183,11 +254,27 @@ function renderCurrentItem() {
 
 function renderSimilar() {
     const list = $("#similarList");
+    if (!list) return;
+    
     list.innerHTML = "";
+    
+    if (state.aiLoading) {
+        list.innerHTML = '<div class="loading">AI is searching...</div>';
+        return;
+    }
+    
+    if (state.similar.length === 0) {
+        list.innerHTML = '<div class="no-results">No similar items found</div>';
+        return;
+    }
+    
+    console.log('renderSimilar called with', state.similar.length, 'items:', state.similar);
     state.similar.forEach((it) => {
+        console.log('Rendering item:', it);
         const row = document.createElement("div");
         row.className = "item";
-        row.id = `item-${it.id}`;
+        row.id = `item-${it.id || 'unknown'}`;
+        console.log('Created row with ID:', row.id);
         if (it.url) {
             row.style.cursor = "pointer";
             row.title = "Open product page";
@@ -246,7 +333,9 @@ function updateBudgetUI() {
     $("#spent").textContent = formatGBP(state.spent);
     const pct = state.budget > 0 ? Math.min(100, Math.round((state.spent / state.budget) * 100)) : 0;
     const arc = $("#progressArc");
-    arc.setAttribute("stroke-dasharray", `${pct}, 100`);
+    if (arc) {
+        arc.setAttribute("stroke-dasharray", `${pct}, 100`);
+    }
 }
 
 // --- SUPABASE & STORAGE LOGIC ---
@@ -322,27 +411,46 @@ async function addToWishlist(item) {
 }
 
 function renderWishlistCount() {
-    $("#wishlistCount").textContent = String(state.wishlistCount || 0);
+    const countEl = $("#wishlistCount");
+    if (countEl) {
+        countEl.textContent = String(state.wishlistCount || 0);
+    }
 }
+
+// --- EVENT HANDLERS ---
 
 function wireEvents() {
     $("#saveItemBtn").onclick = () => addToWishlist(state.currentItem);
     $("#infoBtn").onclick = () => showAlert("Thriftly helps you stay on budget!", "info");
     $("#wishlistBtn").onclick = () => {
-        showAlert(`View your ${state.wishlistCount || 0} saved items on your dashboard!`, "info");
+        showToaster(`View your ${state.wishlistCount || 0} saved items on your dashboard!`, "info");
     };
+    
+    // Add AI search button handler
+    const findLowerBtn = $("#findLowerBtn");
+    if (findLowerBtn) {
+        findLowerBtn.onclick = () => findSimilarItemsWithAI();
+    }
 }
+
+// --- INITIALIZATION ---
 
 async function init() {
     ensureSvgGradient();
     setBrandLogo();
     await loadPersisted();
     renderCurrentItem();
-    renderSimilar();
     renderAlerts();
     updateBudgetUI();
     renderWishlistCount();
     wireEvents();
+    
+    // Show initial loading state before AI search starts
+    state.aiLoading = true;
+    renderSimilar();
+    
+    // Start AI search automatically
+    findSimilarItemsWithAI();
 }
 
 document.addEventListener("DOMContentLoaded", init);

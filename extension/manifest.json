@@ -12,6 +12,24 @@
   "icons": {
     "128": "icons/T_logo.png"
   },
-  "permissions": ["storage"],
-  "host_permissions": ["https://*.supabase.co/*"]
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.supabase.co/*",
+    "https://generativelanguage.googleapis.com/"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "current_item_metadata.json",
+        "retailer_metadata.json"
+      ],
+      "matches": [ "*://*/*" ]
+    }
+  ]
 }
