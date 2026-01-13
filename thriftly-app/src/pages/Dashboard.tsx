@@ -20,6 +20,7 @@ import CommunityCard from "@/components/ui/CommunityCard";
 import CircularProgress from "@/components/ui/CircularProgress";
 import LiquidBackground from "@/components/ui/LiquidBackground";
 import thriftlyLogo from "@/assets/thriftly_logo.png"
+import { supabase, Item, UserWishlist, PurchaseHistory, MonthlyAnalytics } from "@/lib/supabase";
 
 // Mock data
 const mockWishlistItems = [
@@ -52,8 +53,8 @@ const Dashboard = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [monthlyBudget, setMonthlyBudget] = useState<any>(null);
-  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
-  const [purchasedItems, setPurchasedItems] = useState<any[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<UserWishlist[]>([]);
+  const [purchasedItems, setPurchasedItems] = useState<PurchaseHistory[]>([]);
   const [previousMonthBudget, setPreviousMonthBudget] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,50 +74,72 @@ const Dashboard = () => {
     try {
       const { supabase } = await import("@/lib/supabase");
       
-      // Fetch user preferences
-      const { data: preferences } = await supabase
-        .from('user_preferences')
+      // Fetch user profile
+      const { data: profile } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .single();
 
-      // Fetch current month budget
-      const currentMonth = new Date().toISOString().slice(0, 10); // YYYY-MM-DD format
-      const { data: budget } = await supabase
-        .from('monthly_budgets')
+      // Fetch current month analytics
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+      const { data: analytics } = await supabase
+        .from('monthly_analytics')
         .select('*')
         .eq('user_id', userId)
-        .eq('month', currentMonth)
+        .eq('target_month', currentMonth + '-01')
         .single();
 
-      // Fetch previous month budget for comparison
+      // Fetch previous month analytics for comparison
       const previousMonth = new Date();
       previousMonth.setMonth(previousMonth.getMonth() - 1);
       const previousMonthStr = previousMonth.toISOString().slice(0, 7);
-      const { data: prevBudget } = await supabase
-        .from('monthly_budgets')
+      const { data: prevAnalytics } = await supabase
+        .from('monthly_analytics')
         .select('*')
         .eq('user_id', userId)
-        .eq('month', previousMonthStr + '-01')
+        .eq('target_month', previousMonthStr + '-01')
         .single();
 
-      // Fetch wishlist items
+      // Fetch wishlist items with product details
       const { data: wishlist } = await supabase
-        .from('wishlist')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Fetch purchased items
-      const { data: purchased } = await supabase
-        .from('purchased_items')
-        .select('*')
+        .from('user_wishlists')
+        .select(`
+          *,
+          items!inner(
+            product_title,
+            current_listing_price,
+            brand_name,
+            retailer_name,
+            product_image_url,
+            external_source_url
+          )
+        `)
         .eq('user_id', userId)
-        .order('purchase_date', { ascending: false })
+        .order('added_at', { ascending: false });
+
+      // Fetch purchase history with product details
+      const { data: purchased } = await supabase
+        .from('purchase_history')
+        .select(`
+          *,
+          items!inner(
+            product_title,
+            current_listing_price,
+            brand_name,
+            retailer_name,
+            product_image_url,
+            external_source_url,
+            sustainability_rating_score
+          )
+        `)
+        .eq('user_id', userId)
+        .order('transaction_date', { ascending: false })
         .limit(10);
 
-      setUserPreferences(preferences);
-      setMonthlyBudget(budget);
-      setPreviousMonthBudget(prevBudget);
+      setUserPreferences(profile);
+      setMonthlyBudget(analytics);
+      setPreviousMonthBudget(prevAnalytics);
       setWishlistItems(wishlist || []);
       setPurchasedItems(purchased || []);
     } catch (error) {
@@ -155,25 +178,25 @@ const Dashboard = () => {
   if (!user) return null;
 
   // Calculate metrics
-  const budgetAmount = monthlyBudget?.budget_amount || userPreferences?.monthly_budget || 300;
-  const spentAmount = monthlyBudget?.spent_amount || 0;
-  const savedAmount = monthlyBudget?.saved_amount || 0;
+  const budgetAmount = monthlyBudget?.allocated_budget_limit || userPreferences?.monthly_spending_limit || 300;
+  const spentAmount = monthlyBudget?.total_spent_amount || 0;
+  const savedAmount = monthlyBudget?.total_savings_generated || 0;
   const budgetRemaining = budgetAmount - spentAmount;
   const budgetPercentage = Math.round((spentAmount / budgetAmount) * 100);
   
-  // Sustainability score: sum all sustainability scores from purchased_items
+  // Sustainability score: sum all sustainability scores from purchase_history
   const sustainabilityScore = purchasedItems.length > 0 
-    ? purchasedItems.reduce((acc, item) => acc + (item.sustainability_score || 0), 0)
+    ? purchasedItems.reduce((acc, item) => acc + (item.sustainability_rating_score || 0), 0)
     : 0;
 
   // Calculate sustainability score change
-  const previousSustainabilityScore = previousMonthBudget?.sustainability_score;
+  const previousSustainabilityScore = previousMonthBudget?.total_savings_generated;
   const sustainabilityChange = previousSustainabilityScore 
     ? Math.round(sustainabilityScore - previousSustainabilityScore)
     : Math.round(sustainabilityScore * 0.12); // Default growth estimate
 
   // Total saved calculation
-  const totalSaved = savedAmount + (purchasedItems.reduce((acc, item) => acc + (item.price || 0), 0) * 0.3); // Assume 30% savings vs new
+  const totalSaved = savedAmount + (purchasedItems.reduce((acc, item) => acc + (item.final_purchase_price || 0), 0) * 0.3); // Assume 30% savings vs new
 
   return (
     <div className="min-h-screen relative">
@@ -377,35 +400,29 @@ const Dashboard = () => {
                 {wishlistItems.length} items
               </span>
             </div>
-
+{/* 
             {wishlistItems.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {wishlistItems.map((item, index) => {
-                  const imagePath = item.image ? `/${item.image}` : 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=300&h=400&fit=crop';
-                  console.log('Wishlist item image path:', imagePath, 'Original DB value:', item.image); // TODO: fix
-                  return (
+                {wishlistItems.map((item) => (
                   <ItemCard
                     key={item.id}
-                    id={item.id}
-                    name={item.title}
-                    brand={item.shop || 'Unknown'}
-                    price={item.price}
-                    image={imagePath}
-                    store={item.shop}
-                    isFavorite={true}
-                    onFavoriteClick={() => toggleFavorite(item.id)}
-                    animationDelay={200 + index * 100}
+                    title={item.product_title || 'Unknown Item'}
+                    price={item.current_listing_price || 0}
+                    originalPrice={item.original_retail_price}
+                    image={item.product_image_url}
+                    store={item.retailer_name || 'Unknown'}
+                    isFavorited={favorites.includes(item.id)}
+                    onToggleFavorite={() => toggleFavorite(item.id)}
                   />
-                  );
-                })}
+                ))}
               </div>
             ) : (
-              <div className="text-center py-12">
+              <>
                 <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">Your wishlist is empty</h3>
                 <p className="text-muted-foreground">Start adding items you love to see them here!</p>
-              </div>
-            )}
+              </>
+            )} */}
           </TabsContent>
 
           {/* Styleboard Tab */}

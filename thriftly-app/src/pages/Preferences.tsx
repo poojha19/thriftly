@@ -40,45 +40,57 @@ const Preferences = () => {
       const stylesArray = preferredStyles ? preferredStyles.split(",").map(s => s.trim()).filter(s => s) : [];
       const sizesArray = sizePreferences ? sizePreferences.split(",").map(s => s.trim()).filter(s => s) : [];
 
-      // Insert preferences into user_preferences table
-      const { data: preferencesData, error: preferencesError } = await supabase
-        .from('user_preferences')
-        .insert([
-          {
-            user_id: user.id,
-            monthly_budget: parseFloat(monthlyBudget),
-            is_student: isStudent,
-            preferred_brands: brandsArray,
-            preferred_styles: stylesArray,
-            size_preferences: sizesArray,
-          }
-        ])
+      // Update user profile with preferences
+      console.log('Making profile update request with user ID:', user.id);
+      console.log('Update data:', {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        monthly_spending_limit: user.monthly_spending_limit || 200.00,
+        is_student_verified: user.is_student_verified || true,
+        preferred_brand_list: brandsArray,
+        style_tags: stylesArray,
+        clothing_size_prefs: sizesArray,
+        created_at: new Date().toISOString()
+      });
+      
+      const { data: profileData, error: preferencesError } = await supabase
+        .from('profiles')
+        .update({
+          id: user.id,
+          email: user.email,
+          display_name: user.display_name,
+          monthly_spending_limit: user.monthly_spending_limit || 200.00,
+          is_student_verified: user.is_student_verified || true,
+          preferred_brand_list: brandsArray,
+          style_tags: stylesArray,
+          clothing_size_prefs: sizesArray,
+          created_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
         .select()
         .single();
 
       if (preferencesError) {
         toast.error("Error saving preferences: " + preferencesError.message);
       } else {
-        // Create initial monthly budget record
-        const currentMonth = new Date().toISOString().slice(0, 10); // YYYY-MM-DD format (first day of month)
-        const { error: budgetError } = await supabase
-          .from('monthly_budgets')
+        // Create initial monthly analytics record
+        const currentMonth = new Date().toISOString().slice(0, 7) + '-01'; // YYYY-MM-01 format (first day of month)
+        const { error: analyticsError } = await supabase
+          .from('monthly_analytics')
           .insert([
             {
               user_id: user.id,
-              month: currentMonth,
-              budget_amount: parseFloat(monthlyBudget),
-              spent_amount: 0.00,
-              saved_amount: 0.00,
+              target_month: currentMonth,
+              allocated_budget_limit: parseFloat(monthlyBudget),
+              total_spent_amount: 0.00,
+              total_savings_generated: 0.00,
             }
           ]);
 
-        if (budgetError) {
-          toast.error("Error setting up budget: " + budgetError.message);
+        if (analyticsError) {
+          toast.error("Error setting up analytics: " + analyticsError.message);
         } else {
-          // Initialize empty purchased_items record (optional - usually items are added when purchased)
-          // This table will be populated when users actually purchase items
-          
           toast.success("Preferences saved successfully! Your account is ready.");
           // Navigate to login page
           navigate("/auth");

@@ -32,9 +32,9 @@ const Auth = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        // Get user profile from our users table
+        // Get user profile from profiles table
         const { data: profile } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
           .eq('email', loginEmail)
           .single();
@@ -65,7 +65,8 @@ const Auth = () => {
         password: signupPassword,
         options: {
           data: {
-            name: signupName,
+            display_name: signupName,
+            email: signupEmail
           }
         }
       });
@@ -75,24 +76,42 @@ const Auth = () => {
         return;
       }
       
-      // Then create the user profile in our users table
-      const { data: profileData, error: profileError } = await supabase
-        .from('users')
-        .insert([
-          {
-            email: signupEmail,
-            name: signupName,
-          }
-        ])
-        .select()
-        .single();
+      if (authData.user) {
+        // Create user profile in profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: authData.user.id,
+              email: signupEmail,
+              display_name: signupName,
+              monthly_spending_limit: 200.00,
+              is_student_verified: false,
+              preferred_brand_list: [],
+              style_tags: [],
+              clothing_size_prefs: []
+            }
+          ])
+          .select()
+          .single();
         
-      if (profileError) {
-        toast.error("Error creating user profile: " + profileError.message);
-      } else {
-        localStorage.setItem("thriftly_user", JSON.stringify(profileData));
-        toast.success("Account created successfully!");
-        navigate("/preferences");
+        if (profileError) {
+          toast.error("Error creating user profile: " + profileError.message);
+        } else {
+          // Store user data in localStorage for preferences page
+          localStorage.setItem("thriftly_user", JSON.stringify({
+            ...authData.user,
+            email: signupEmail,
+            display_name: signupName,
+            monthly_spending_limit: 200.00,
+            is_student_verified: false,
+            preferred_brand_list: [],
+            style_tags: [],
+            clothing_size_prefs: []
+          }));
+          toast.success("Account created successfully! Please proceed to state your preferences");
+          navigate("/preferences");
+        }
       }
     } catch (error) {
       toast.error("Signup failed. Please try again.");

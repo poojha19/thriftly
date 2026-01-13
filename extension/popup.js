@@ -10,6 +10,15 @@ const storage = {
     async set(obj) { return new Promise((resolve) => chrome.storage.sync.set(obj, resolve)); },
 };
 
+// Generate UUID function
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 const state = {
     currentItem: {
         id: "lela-dress",
@@ -340,71 +349,63 @@ function updateBudgetUI() {
 
 // --- SUPABASE & STORAGE LOGIC ---
 
-async function loadPersisted() {
-    const stored = await storage.get(["budget", "spent", "wishlist"]);
-    if (stored.budget) state.budget = stored.budget;
-    if (stored.spent) state.spent = stored.spent;
-    
-    // Get wishlist count from Supabase
-    try {
-        const db = window.supabaseClient;
-        if (db) {
-            const { data, error } = await db.from('wishlist').select('id').execute();
-            if (!error && data) {
-                state.wishlistCount = data.length;
-                renderWishlistCount();
-            }
-        }
-    } catch (e) { 
-        console.error("Supabase load error:", e);
-        // Set default count if Supabase not available
-        state.wishlistCount = 0;
-        renderWishlistCount();
-    }
-}
-
 async function addToWishlist(item) {
     const db = window.supabaseClient;
-    
+    userId = "e231bb20-5ebd-417c-a601-c7a9721fc1b0"
+
     // 1. Update Local State
     if (!state.wishlist.find(w => w.id === item.id)) {
-        state.wishlist.push({ id: item.id, title: item.title, price: item.price });
+        state.wishlist.push({ id: item.id, title: item.title, price: item.price, shop: item.shop, image: item.image, url: item.url });
     }
 
     // 2. Persist to Supabase
     try {
         if (db) {
-            // Check if item already exists
-            const { data: existingItem } = await db.from('wishlist').select('id').eq('item_id', item.id).execute();
+            // First, create the item in the items table
+            const itemUUID = generateUUID();
+            const { data: itemData, error: itemError } = await db.from('items').upsert({
+                id: itemUUID,
+                product_title: item.title,
+                brand_name: item.shop || 'Unknown',
+                retailer_name: item.shop || 'Unknown',
+                original_retail_price: item.oldPrice || item.price * 1.2, // Hardcoded 20% markup if no old price
+                current_listing_price: item.price,
+                sustainability_rating_score: 7.5, // Hardcoded rating score
+                material_composition: '95% Viscose, 5% Elastane', // Hardcoded material
+                product_image_url: item.image || '',
+                external_source_url: item.url || 'https://www.thereformation.com/products/lela-dress/1317782CXT.html?dwvar_1317782CXT_color=SGU&quantity=1',
+                category_path: 'Women > Dresses > Midi', // Hardcoded category
+                created_at: new Date().toISOString()
+            });
             
-            if (existingItem && existingItem.length > 0) {
-                showAlert("Item already saved!", "info");
-            } else {
-                const { error } = await db.from('wishlist').upsert({
-                    item_id: item.id,
-                    title: item.title,
-                    price: item.price,
-                    shop: item.shop || 'Unknown',
-                    image: item.image || '',
-                    url: item.url || '',
-                    created_at: new Date().toISOString()
-                }, { onConflict: 'item_id' });
+            if (itemError) throw itemError;
+            
+            // Then add to user_wishlist
+            const { error: wishlistError } = await db.from('user_wishlists').upsert({
+                user_id: userId,
+                item_id: itemUUID,
+                notes: `Saved from ${item.shop || 'Unknown'}`,
+                added_at: new Date().toISOString()
+            }, { onConflict: 'user_id,item_id' });
 
-                if (error) throw error;
-                
-                // Update count from database
-                const { data: countData } = await db.from('wishlist').select('id').execute();
-                state.wishlistCount = countData.length;
-                renderWishlistCount();
-                
-                showAlert("Saved to Cloud!", "success");
-            }
+            if (wishlistError) throw wishlistError;
+            
+            // Update count from database
+            const { data: countData } = await db.from('user_wishlists').select('id').execute();
+            state.wishlistCount = countData.length;
+            renderWishlistCount();
+            
+            showAlert("Saved to Cloud!", "success");
         } else {
             showAlert("Supabase not available", "error");
         }
     } catch (e) {
         console.error("Cloud Save Error:", e);
-        showAlert("Saved locally (Offline)", "info");
+        if (e.message && e.message.includes('row-level security')) {
+            showAlert("Please sign in to save items to your wishlist!", "error");
+        } else {
+            showAlert("Saved locally (Offline)", "info");
+        }
     }
     
     await storage.set({ wishlist: state.wishlist });
@@ -434,11 +435,10 @@ function wireEvents() {
 }
 
 // --- INITIALIZATION ---
-
 async function init() {
     ensureSvgGradient();
     setBrandLogo();
-    await loadPersisted();
+    // await loadPersisted();
     renderCurrentItem();
     renderAlerts();
     updateBudgetUI();

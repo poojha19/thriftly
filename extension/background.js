@@ -144,4 +144,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         findSimilarItems().then(sendResponse);
         return true; // Indicates that the response is sent asynchronously
     }
+    
+    if (request.action === 'closePopup') {
+        // Handle closePopup action from signin.js
+        console.log('Background script: Received closePopup action');
+        sendResponse({ success: true });
+        return true;
+    }
+    
+    if (request.action === 'controlBackToExtension') {
+        // Handle control back to extension from signin.js
+        console.log('Background script: Received controlBackToExtension action');
+        sendResponse({ success: true });
+        return true;
+    }
 });

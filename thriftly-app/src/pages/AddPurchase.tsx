@@ -72,9 +72,9 @@ const AddPurchase = () => {
         discount: 33,
       };
 
-      // Insert into purchased_items table
+      // Insert into purchase_history table
       const { data, error } = await supabase
-        .from('purchased_items')
+        .from('purchase_history')
         .insert([purchaseData])
         .select()
         .single();
@@ -82,12 +82,13 @@ const AddPurchase = () => {
       if (error) {
         toast.error("Error adding purchase: " + error.message);
       } else {
-        // Fetch current monthly budget data
-        const currentMonth = new Date().toISOString().slice(0, 7);
+        // Fetch current monthly analytics data
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
         const { data: currentBudget } = await supabase
-          .from('monthly_budgets')
+          .from('monthly_analytics')
           .select('*')
           .eq('user_id', user.id)
+          .eq('target_month', currentMonth + '-01')
           .single();
 
         console.log('Current budget data:', currentBudget, 'User ID:', user.id, 'Month:', currentMonth + '-01');
@@ -112,34 +113,30 @@ const AddPurchase = () => {
         console.log('Monthly Budget Record ID:', currentBudget?.id);
         console.log('Full budget record:', currentBudget);
 
-        // Calculate saved amount
-        const savedAmount = discountAmount;
-        const newSavedAmount = (currentBudget?.saved_amount || 0) + savedAmount;
-        console.log('Amount to save in saved_amount field:', savedAmount);
-        console.log('Current saved_amount:', currentBudget?.saved_amount, 'New saved_amount:', newSavedAmount);
-
-        // Update both spent_amount and saved_amount fields
+        // Update both total_spent_amount and total_savings_generated fields
         const updateData = { 
-          spent_amount: newSpentAmount,
-          saved_amount: newSavedAmount
+          total_spent_amount: newSpentAmount,
+          total_savings_generated: discountAmount
         };
         console.log('Update data:', updateData);
-        console.log('Update conditions: user_id =', user.id, 'monthly_budget id =', currentBudget?.id);
-
+        console.log('Update conditions: user_id =', user.id, 'monthly_analytics id =', currentBudget?.id);
+        
         const { error: updateError, data: updateResult } = await supabase
-          .from('monthly_budgets')
+          .from('monthly_analytics')
           .update(updateData)
           .eq('user_id', user.id)
-          .select();
+          .eq('target_month', currentMonth + '-01')
+          .select()
+          .single();
 
         console.log('Update result:', updateResult);
         console.log('Update error:', updateError);
 
         if (updateError) {
-          console.error('Error updating spent_amount:', updateError);
+          console.error('Error updating total_spent_amount:', updateError);
           toast.error('Error updating budget: ' + updateError.message);
         } else {
-          console.log('Successfully updated spent_amount to:', newSpentAmount);
+          console.log('Successfully updated total_spent_amount to:', newSpentAmount);
           toast.success(`Purchase added! Spent $${actualSpent.toFixed(2)} (saved $${discountAmount.toFixed(2)} with ${purchaseData.discount}% discount)`);
           navigate("/dashboard");
         }
