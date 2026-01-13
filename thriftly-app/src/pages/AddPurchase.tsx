@@ -60,16 +60,12 @@ const AddPurchase = () => {
       // Hardcoded values for now (will be scraped from URL in future)
       const purchaseData = {
         user_id: user.id,
-        item_id: url.split('/').pop() || 'manual-' + Date.now(),
-        title: "Strapless knitted top",
-        price: 29.99,
-        shop: "Mango",
-        image: "assets/mango_top.png",
-        url: url,
-        category: "Going Out",
-        sustainability_score: 2.0,
-        discounted: true,
-        discount: 33,
+        item_id: null, // Will be null for manual purchases
+        final_purchase_price: 19.99,
+        estimated_co2_saved_kg: 2.5, // Estimated CO2 savings for secondhand
+        estimated_water_saved_litres: 1500, // Estimated water savings
+        transaction_date: new Date().toISOString(),
+        sustainability_rating_score: 20
       };
 
       // Insert into purchase_history table
@@ -102,42 +98,31 @@ const AddPurchase = () => {
 
         console.log('Budget record found:', currentBudget);
 
-        // Calculate actual amount spent after discount
-        const discountAmount = purchaseData.price * (purchaseData.discount / 100);
-        const actualSpent = purchaseData.price - discountAmount;
-        const newSpentAmount = (currentBudget?.spent_amount || 0) + actualSpent;
+        // Update monthly analytics
+        const newSpentAmount = (currentBudget?.total_spent_amount || 0) + purchaseData.final_purchase_price;
+        const newSavingsAmount = (currentBudget?.total_savings_generated || 0) + 10; // Fixed $10 savings as requested
 
-        console.log('Price:', purchaseData.price, 'Discount:', purchaseData.discount + '%');
-        console.log('Discount amount:', discountAmount, 'Actual spent:', actualSpent);
-        console.log('Current spent_amount:', currentBudget?.spent_amount, 'New spent_amount:', newSpentAmount);
-        console.log('Monthly Budget Record ID:', currentBudget?.id);
-        console.log('Full budget record:', currentBudget);
+        console.log('Updating analytics - Spent:', currentBudget?.total_spent_amount, '->', newSpentAmount);
+        console.log('Updating analytics - Saved:', currentBudget?.total_savings_generated, '->', newSavingsAmount);
 
-        // Update both total_spent_amount and total_savings_generated fields
-        const updateData = { 
-          total_spent_amount: newSpentAmount,
-          total_savings_generated: discountAmount
-        };
-        console.log('Update data:', updateData);
-        console.log('Update conditions: user_id =', user.id, 'monthly_analytics id =', currentBudget?.id);
-        
-        const { error: updateError, data: updateResult } = await supabase
+        // Update monthly_analytics table
+        const { error: updateError } = await supabase
           .from('monthly_analytics')
-          .update(updateData)
+          .update({ 
+            total_spent_amount: newSpentAmount,
+            total_savings_generated: newSavingsAmount,
+            sustainability_rating_score: (currentBudget?.sustainability_rating_score || 0) + purchaseData.sustainability_rating_score, // Make accumulative
+            updated_at: new Date().toISOString()
+          })
           .eq('user_id', user.id)
-          .eq('target_month', currentMonth + '-01')
-          .select()
-          .single();
-
-        console.log('Update result:', updateResult);
-        console.log('Update error:', updateError);
+          .eq('target_month', currentMonth + '-01');
 
         if (updateError) {
-          console.error('Error updating total_spent_amount:', updateError);
-          toast.error('Error updating budget: ' + updateError.message);
+          toast.error('Error updating analytics: ' + updateError.message);
         } else {
-          console.log('Successfully updated total_spent_amount to:', newSpentAmount);
-          toast.success(`Purchase added! Spent $${actualSpent.toFixed(2)} (saved $${discountAmount.toFixed(2)} with ${purchaseData.discount}% discount)`);
+          console.log('Successfully updated monthly analytics');
+          console.log('Total spent:', newSpentAmount, 'Total saved:', newSavingsAmount);
+          toast.success(`Congrats on your new purchase - it has been saved!`);
           navigate("/dashboard");
         }
       }

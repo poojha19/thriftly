@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export interface Item {
   id: string;
   product_title: string;
+  original_retail_price: number;
   current_listing_price: number;
   brand_name?: string;
   retailer_name?: string;
@@ -54,6 +55,7 @@ export interface MonthlyAnalytics {
   allocated_budget_limit: number;
   total_spent_amount: number;
   total_savings_generated: number;
+  sustainability_rating_score: number;
   updated_at?: string;
 }
 

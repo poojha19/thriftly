@@ -49,11 +49,12 @@ const mockCommunityItems = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<{ email: string; name: string; id: string } | null>(null);
-  const [favorites, setFavorites] = useState<number[]>([1, 2, 3, 4]);
+  const [favorites, setFavorites] = useState<number[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [monthlyBudget, setMonthlyBudget] = useState<any>(null);
   const [wishlistItems, setWishlistItems] = useState<UserWishlist[]>([]);
+  const [wishlistItemsWithDetails, setWishlistItemsWithDetails] = useState<(UserWishlist & Item)[]>([]);
   const [purchasedItems, setPurchasedItems] = useState<PurchaseHistory[]>([]);
   const [previousMonthBudget, setPreviousMonthBudget] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -141,6 +142,12 @@ const Dashboard = () => {
       setMonthlyBudget(analytics);
       setPreviousMonthBudget(prevAnalytics);
       setWishlistItems(wishlist || []);
+      // Transform wishlist data to include item details for rendering
+      const wishlistWithDetails = wishlist?.map(wishlistItem => ({
+        ...wishlistItem,
+        ...wishlistItem.items
+      })) || [];
+      setWishlistItemsWithDetails(wishlistWithDetails);
       setPurchasedItems(purchased || []);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -184,10 +191,8 @@ const Dashboard = () => {
   const budgetRemaining = budgetAmount - spentAmount;
   const budgetPercentage = Math.round((spentAmount / budgetAmount) * 100);
   
-  // Sustainability score: sum all sustainability scores from purchase_history
-  const sustainabilityScore = purchasedItems.length > 0 
-    ? purchasedItems.reduce((acc, item) => acc + (item.sustainability_rating_score || 0), 0)
-    : 0;
+  // Sustainability score: read from monthly_analytics table
+  const sustainabilityScore = monthlyBudget?.sustainability_rating_score || 0;
 
   // Calculate sustainability score change
   const previousSustainabilityScore = previousMonthBudget?.total_savings_generated;
@@ -220,7 +225,7 @@ const Dashboard = () => {
             <div className="hidden items-center gap-3 md:flex">
               <div className="text-right">
                 <p className="text-sm font-medium text-foreground">
-                  Hi, {user.name}!
+                  Hi, {user?.name || 'Poojha'}!
                 </p>
                 <p className="text-xs text-muted-foreground">Welcome back</p>
               </div>
@@ -230,7 +235,7 @@ const Dashboard = () => {
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary via-accent to-pink-400 shadow-glow hover:shadow-lg transition-shadow"
                 >
                   <span className="text-primary-foreground font-medium">
-                    {user.name.charAt(0).toUpperCase()}
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </span>
                 </button>
                 
@@ -349,16 +354,9 @@ const Dashboard = () => {
               <StatCard
                 title="Total Saved"
                 value={`$${totalSaved.toFixed(0)}`}
-                subtitle={`${purchasedItems.length} items purchased this month`}
                 icon={<TrendingDown className="h-5 w-5 text-primary" />}
                 animationDelay={600}
               >
-                <p className="mt-4 text-sm text-muted-foreground">
-                  {purchasedItems.length > 0 
-                    ? `Avg ${Math.round((totalSaved / purchasedItems.length) * 100 / (totalSaved / purchasedItems.length || 1))}% off retail`
-                    : 'Start shopping to see savings'
-                  }
-                </p>
               </StatCard>
             </div>
 
@@ -397,22 +395,24 @@ const Dashboard = () => {
                 Your Wishlist
               </h2>
               <span className="rounded-full bg-gradient-to-r from-primary/10 to-accent/10 px-4 py-1.5 text-sm font-medium text-primary border border-primary/20">
-                {wishlistItems.length} items
+                {wishlistItemsWithDetails.length} items
               </span>
             </div>
-{/* 
-            {wishlistItems.length > 0 ? (
+            
+            {wishlistItemsWithDetails.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {wishlistItems.map((item) => (
+                {wishlistItemsWithDetails.map((item) => (
                   <ItemCard
                     key={item.id}
-                    title={item.product_title || 'Unknown Item'}
+                    id={parseInt(item.id)}
+                    name={item.product_title || 'Unknown Item'}
+                    brand={item.brand_name || 'Unknown Brand'}
                     price={item.current_listing_price || 0}
                     originalPrice={item.original_retail_price}
-                    image={item.product_image_url}
+                    image={item.product_image_url || ''}
                     store={item.retailer_name || 'Unknown'}
-                    isFavorited={favorites.includes(item.id)}
-                    onToggleFavorite={() => toggleFavorite(item.id)}
+                    isFavorite={favorites.includes(parseInt(item.id))}
+                    onFavoriteClick={() => toggleFavorite(parseInt(item.id))}
                   />
                 ))}
               </div>
@@ -422,7 +422,7 @@ const Dashboard = () => {
                 <h3 className="text-xl font-semibold text-foreground mb-2">Your wishlist is empty</h3>
                 <p className="text-muted-foreground">Start adding items you love to see them here!</p>
               </>
-            )} */}
+            )}
           </TabsContent>
 
           {/* Styleboard Tab */}
